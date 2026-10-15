@@ -1,1 +1,4 @@
 # Tells other developer what liberary to install
+
+transformers
+torch
