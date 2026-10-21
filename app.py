@@ -1,48 +1,91 @@
 # ==========================================
-# 1. IMPORTS
-# We import the 'pipeline' function from Hugging Face's transformers library.
+# 1. IMPORTS & SETUP
 # ==========================================
+import re
 from transformers import pipeline
 
-# ==========================================
-# 2. LOAD PRE-TRAINED MODEL
-# We initialize an open-source NLP sentiment model.
-# The first run will download model weights (~250MB) locally.
-# ==========================================
 print("Loading AI model... Please wait...")
 sentiment_pipeline = pipeline("sentiment-analysis")
 
 
-def text_analyze_sentiment(text: str) -> dict:
+def analyze_long_text(text: str) -> dict:
     """
-    Analyzes sentiment using a pre-trained Transformer model.
-    Returns label (POSITIVE/NEGATIVE) and confidence score.
+    Analyzes text with intelligent clause weighting and contrastive overriding.
     """
-    # The pipeline returns a list containing a dict: [{'label': 'POSITIVE', 'score': 0.998}]
-    raw_results = sentiment_pipeline(text)
-    prediction = raw_results[0]
+    clean_input = text.strip().strip('"').strip("'")
+
+    # Split by clause boundaries and contrastive conjunctions
+    raw_chunks = re.split(r'(?<=[.!?])\s+|,\s+(?=but|however|although|yet)', clean_input, flags=re.IGNORECASE)
+    sentences = [c.strip() for c in raw_chunks if c.strip()]
+    
+    if not sentences:
+        return {"error": "No valid text chunks found."}
+
+    chunk_results = []
+    positive_count = 0
+    negative_count = 0
+
+    for i, sentence in enumerate(sentences):
+        prediction = sentiment_pipeline(sentence[:512])[0]
+        label = prediction['label']
+        confidence = prediction['score']
+
+        if label == "POSITIVE":
+            positive_count += 1
+        else:
+            negative_count += 1
+
+        chunk_results.append({
+            "chunk_id": i + 1,
+            "text": sentence,
+            "sentiment": label,
+            "confidence": round(confidence, 4)
+        })
+
+    # --- INTELLIGENT AGGREGATION LOGIC ---
+    if len(chunk_results) > 1 and any(word in clean_input.lower() for word in ['but', 'however', 'although', 'yet']):
+        final_chunk = chunk_results[-1]
+        overall_sentiment = final_chunk['sentiment']
+        average_score = final_chunk['confidence'] if overall_sentiment == "POSITIVE" else -final_chunk['confidence']
+        print("\n[AI Insight] Detected contrastive pivot. Applying recency override to capture true intent.")
+    else:
+        total_score = sum(c['confidence'] if c['sentiment'] == "POSITIVE" else -c['confidence'] for c in chunk_results)
+        average_score = total_score / len(chunk_results)
+        overall_sentiment = "POSITIVE" if average_score >= 0 else "NEGATIVE"
 
     return {
-        "input": text,
-        "sentiment": prediction["label"],
-        "confidence": round(prediction["score"], 4)
+        "total_chunks": len(sentences),
+        "overall_sentiment": overall_sentiment,
+        "average_score": round(average_score, 4),
+        "positive_chunks": positive_count,
+        "negative_chunks": negative_count,
+        "breakdown": chunk_results
     }
 
 
 # ==========================================
-# 3. EXECUTION ENTRY POINT
+# 2. EXECUTION ENTRY POINT
 # ==========================================
 if __name__ == "__main__":
-    print("\n-- AI SENTIMENT ANALYZER v2.0 (Transformer Powered) --")
+    print("\n-- AI DOCUMENT SENTIMENT ANALYZER v3.0 (Smart Chunking & Overriding) --")
     
-    user_input = input("Enter a sentence to analyze: ")
+    print("Paste your long text below (press Enter when done):")
+    user_input = input("> ")
 
     if user_input.strip():
-        result = text_analyze_sentiment(user_input)
-        print("\n-- Analysis Result --")
-        print(f"Text:       {result['input']}")
-        print(f"Sentiment:  {result['sentiment']}")
-        print(f"Confidence: {result['confidence'] * 100}%")
-        print("------------------------")
+        result = analyze_long_text(user_input)
+        
+        print("\n==============================")
+        print("      OVERALL SUMMARY         ")
+        print("==============================")
+        print(f"Total Sentences Analyzed: {result['total_chunks']}")
+        print(f"Overall Document Sentiment: {result['overall_sentiment']}")
+        print(f"Average Sentiment Score:   {result['average_score']}")
+        print(f"Positive Chunks / Negative Chunks: {result['positive_chunks']} / {result['negative_chunks']}")
+        print("------------------------------")
+        
+        print("\n--- Breakdown by Sentence ---")
+        for chunk in result['breakdown']:
+            print(f"[{chunk['chunk_id']}] {chunk['sentiment']} ({chunk['confidence']*100}%): {chunk['text']}")
     else:
         print("No text provided. Exiting program.")
