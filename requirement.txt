@@ -1,8 +1,0 @@
-
-
-streamlit
-transformers
-torch
-fastapi
-uvicorn
-pydantic
