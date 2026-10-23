@@ -1,5 +1,5 @@
 # ==========================================
-# FASTAPI SENTIMENT ANALYZER SERVICE (v3.1)
+# FASTAPI SENTIMENT ANALYZER SERVICE (v3.2)
 # ==========================================
 import re
 from fastapi import FastAPI, HTTPException
@@ -8,8 +8,8 @@ from transformers import pipeline
 
 app = FastAPI(
     title="AI Sentiment Analyzer API",
-    description="Production-grade NLP REST API featuring advanced RoBERTa clause chunking and contrastive intent overriding.",
-    version="3.1.0",
+    description="Production-grade NLP REST API featuring advanced RoBERTa analysis, clause chunking, and intent guardrails.",
+    version="3.2.0",
 )
 
 # Load the advanced RoBERTa sentiment model on server startup
@@ -30,8 +30,33 @@ class TextAnalysisRequest(BaseModel):
 
 
 def process_sentiment_analysis(text: str) -> dict:
-    """Core logic: clause chunking, three-way sentiment scoring, and contrastive overriding."""
+    """Core logic: intent guardrails, clause chunking, three-way sentiment scoring, and contrastive overriding."""
     clean_input = text.strip().strip('"').strip("'")
+
+    # 🛡️ SMART INTENT GUARDRAIL: Catch informational questions / confusion statements
+    inquiry_patterns = [
+        "confused about", "confused by", "what is", "how does", 
+        "can you explain", "tell me about", "why is", "what are", "who is"
+    ]
+    
+    is_inquiry = any(pattern in clean_input.lower() for pattern in inquiry_patterns)
+    
+    if is_inquiry:
+        return {
+            "total_chunks": 1,
+            "overall_sentiment": "NEUTRAL",
+            "average_score": 0.0,
+            "positive_chunks": 0,
+            "negative_chunks": 0,
+            "neutral_chunks": 1,
+            "applied_recency_override": False,
+            "breakdown": [{
+                "chunk_id": 1,
+                "text": clean_input,
+                "sentiment": "NEUTRAL",
+                "confidence": 0.95
+            }]
+        }
 
     # Split by clause boundaries and contrastive conjunctions
     raw_chunks = re.split(
@@ -51,7 +76,6 @@ def process_sentiment_analysis(text: str) -> dict:
 
     for i, sentence in enumerate(sentences):
         prediction = sentiment_pipeline(sentence[:512])[0]
-        # RoBERTa maps labels like "positive", "negative", "neutral" (we uppercase them for consistency)
         label = prediction["label"].upper()
         confidence = prediction["score"]
 
@@ -71,14 +95,13 @@ def process_sentiment_analysis(text: str) -> dict:
             }
         )
 
-    # Convert labels to numerical weights for scoring (-1 to 1 scale)
     def label_to_score(sentiment: str, conf: float) -> float:
         if sentiment == "POSITIVE":
             return conf
         elif sentiment == "NEGATIVE":
             return -conf
         else:
-            return 0.0  # Neutral carries a neutral weight
+            return 0.0
 
     # Contrastive overriding logic
     if len(chunk_results) > 1 and any(
@@ -95,7 +118,6 @@ def process_sentiment_analysis(text: str) -> dict:
         )
         average_score = total_score / len(chunk_results)
         
-        # Determine overall sentiment based on averaged score thresholds
         if average_score > 0.15:
             overall_sentiment = "POSITIVE"
         elif average_score < -0.15:
@@ -119,17 +141,15 @@ def process_sentiment_analysis(text: str) -> dict:
 
 @app.get("/")
 def health_check():
-    """Health check endpoint to confirm API service status."""
     return {
         "status": "online",
         "service": "AI Sentiment Analyzer API",
-        "version": "3.1.0",
+        "version": "3.2.0",
     }
 
 
 @app.post("/analyze")
 def analyze_text_endpoint(payload: TextAnalysisRequest):
-    """Analyze long text inputs using model chunking and sentiment override logic."""
     try:
         results = process_sentiment_analysis(payload.text)
         return {"status": "success", "data": results}
