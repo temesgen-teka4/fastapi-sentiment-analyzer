@@ -1,6 +1,6 @@
 streamlit
-torch
-transformers
 pydantic
 fastapi
 uvicorn
+google-genai
+python-dotenv
