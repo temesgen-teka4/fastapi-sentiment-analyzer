@@ -57,7 +57,7 @@ if st.button("🚀 Analyze with Deep AI Reasoning", use_container_width=True):
                 genai.configure(api_key=active_key)
                 
                 # Use gemini-2.0-flash (stable production name)
-                model = genai.GenerativeModel('gemini-2.0-flash')
+                model = genai.GenerativeModel('gemini-3.8-flash')
                 
                 prompt = f"""
 Analyze the text below with deep human-level comprehension. Account for sarcasm, double negatives, counterfactual conditionals, clause structures, and implicit subtext.
