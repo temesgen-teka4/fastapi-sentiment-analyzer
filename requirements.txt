@@ -2,5 +2,5 @@ streamlit
 pydantic
 fastapi
 uvicorn
-google-genai
+google-generativeai
 python-dotenv
