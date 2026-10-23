@@ -1,5 +1,5 @@
 # ==========================================
-# STREAMLIT TEXT INTELLIGENCE DASHBOARD (v4.3 - Bulletproof)
+# STREAMLIT TEXT INTELLIGENCE DASHBOARD (v4.4)
 # ==========================================
 import os
 import json
@@ -12,7 +12,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# 1. Retrieve API key from Streamlit Secrets or environment variables
+# Safely fetch API key
 api_key_env = ""
 try:
     if "GEMINI_API_KEY" in st.secrets:
@@ -23,17 +23,15 @@ except Exception:
     pass
 
 st.title("🧠 AI Text Intelligence Platform")
-st.caption("Powered by Gemini 2.0/2.5 Flash • Human-Level Intent & Sarcasm Decoding")
+st.caption("Powered by Gemini 3.8 Flash • Human-Level Intent & Sarcasm Decoding")
 
-# Sidebar Configuration
 with st.sidebar:
     st.header("⚙️ Configuration")
     user_input_key = st.text_input("Gemini API Key:", value=api_key_env, type="password")
-    
     if user_input_key:
         st.success("🟢 API Key Ready")
     else:
-        st.warning("🟡 Please paste your Gemini API key above.")
+        st.warning("🟡 Please paste your Gemini API key.")
 
 st.markdown("---")
 
@@ -46,17 +44,14 @@ if st.button("🚀 Analyze with Deep AI Reasoning", use_container_width=True):
     if not user_text.strip():
         st.warning("Please enter some text to analyze.")
     elif not active_key:
-        st.error("❌ Error: No Gemini API Key found. Please paste your key in the sidebar.")
+        st.error("❌ Error: No Gemini API Key found. Please enter it in the sidebar.")
     else:
         clean_input = user_text.strip().strip('"').strip("'")
         
-        # Explicit status container so you see progress or errors visually
-        with st.status("Analyzing text with Gemini...", expanded=True) as status:
+        with st.spinner("Analyzing with Gemini 3.8 Flash..."):
             try:
-                st.write("Configuring Gemini client...")
                 genai.configure(api_key=active_key)
-                
-                # Use gemini-2.0-flash (stable production name)
+                # Use current stable Gemini 3.8 Flash model identifier
                 model = genai.GenerativeModel('gemini-3.8-flash')
                 
                 prompt = f"""
@@ -64,7 +59,7 @@ Analyze the text below with deep human-level comprehension. Account for sarcasm,
 
 Text: "{clean_input}"
 
-Return ONLY a raw JSON object (no markdown code blocks like ```json, just raw text json) with this exact structure:
+Return ONLY a raw JSON object (no markdown formatting blocks like ```json, just the pure JSON text) with this exact schema:
 {{
     "overall_sentiment": "POSITIVE" | "NEGATIVE" | "NEUTRAL",
     "confidence_score": 0.95,
@@ -81,16 +76,12 @@ Return ONLY a raw JSON object (no markdown code blocks like ```json, just raw te
     ]
 }}
 """
-                st.write("Sending request to Gemini API...")
                 response = model.generate_content(
                     prompt,
                     generation_config={"temperature": 0.1, "response_mime_type": "application/json"}
                 )
                 
                 raw_text = response.text.strip()
-                st.write("Parsing response data...")
-                
-                # Clean markdown blocks just in case
                 if raw_text.startswith("```json"):
                     raw_text = raw_text[7:]
                 if raw_text.startswith("```"):
@@ -108,29 +99,23 @@ Return ONLY a raw JSON object (no markdown code blocks like ```json, just raw te
                     "human_reasoning": llm_data.get("human_reasoning", "No reasoning provided."),
                     "clause_breakdown": llm_data.get("clause_breakdown", [])
                 }
-                
-                status.update(label="Analysis complete!", state="complete", expanded=False)
                 st.rerun()
                 
             except Exception as e:
-                status.update(label="Analysis failed!", state="error", expanded=True)
-                st.error(f"❌ Detailed Error: {str(e)}")
+                st.error(f"❌ Execution Error: {str(e)}")
 
 # --- DISPLAY RESULTS ---
 if "analysis_data" in st.session_state:
     data = st.session_state["analysis_data"]
     
     st.markdown("### 📊 Analysis Summary")
-    
     col1, col2, col3 = st.columns(3)
     
     with col1:
         emojis = {"POSITIVE": "POSITIVE 😃", "NEGATIVE": "NEGATIVE 🙁", "NEUTRAL": "NEUTRAL 😐"}
         st.metric("Overall Sentiment", emojis.get(data["overall_sentiment"], data["overall_sentiment"]))
-        
     with col2:
         st.metric("Confidence Score", f"{data['confidence_score'] * 100:.1f}%")
-        
     with col3:
         st.metric("Detected Tone Nuance", data["nuance"])
 
