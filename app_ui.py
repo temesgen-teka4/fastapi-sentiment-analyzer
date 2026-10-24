@@ -1,5 +1,5 @@
 # ==========================================
-# STREAMLIT TEXT INTELLIGENCE DASHBOARD (v5.1 - Complete Final Version)
+# STREAMLIT TEXT INTELLIGENCE PLATFORM (v6.0 - Interactive Loop Edition)
 # ==========================================
 import streamlit as st
 import re
@@ -11,16 +11,22 @@ st.set_page_config(
 )
 
 st.title("🧠 AI Text Intelligence Platform")
-st.caption("Hybrid Heuristic & Deep Intent Engine • 100% Uptime & Zero Quota Blocks")
+st.caption("Interactive Hybrid Intelligence Engine • Continuous Analysis Loop")
 
 st.markdown("---")
 
-default_text = "If the customer support team were actually responsive, this would easily be a 5-star product."
-user_text = st.text_area("Paste your input text below:", value=default_text, height=130)
+# Initialize chat session history
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {
+            "role": "assistant",
+            "content": "👋 Hello! I'm your AI Text Intelligence Assistant. Type or paste any text below (try tricky sentences with sarcasm or counterfactuals like *'If support were responsive, this would be 5-star'*), and I will break down its intent and clauses instantly!",
+            "analysis": None
+        }
+    ]
 
 def intelligent_heuristic_analysis(text: str) -> dict:
-    """Performs advanced linguistic rule-based analysis to instantly decode 
-    sarcasm, counterfactual conditionals, and clause sentiment without API bottlenecks."""
+    """Advanced heuristic linguistic decoder for sentiment, sarcasm, and clauses."""
     clean = text.strip()
     lower_text = clean.lower()
     
@@ -89,49 +95,86 @@ def intelligent_heuristic_analysis(text: str) -> dict:
         "clause_breakdown": clause_breakdown
     }
 
-if st.button("🚀 Analyze Text Instantly", use_container_width=True):
-    if not user_text.strip():
-        st.warning("Please enter some text to analyze.")
-    else:
-        with st.spinner("Decoding text semantics..."):
-            result = intelligent_heuristic_analysis(user_text)
-            st.session_state["analysis_data"] = result
-            st.success("Analysis complete!")
-
-# --- DISPLAY RESULTS SAFELY ---
-if "analysis_data" in st.session_state:
-    data = st.session_state["analysis_data"]
-    
-    sentiment = data.get("overall_sentiment", "NEUTRAL").upper()
-    confidence = float(data.get("confidence_score", 0.0))
-    nuance = data.get("detected_nuance") or data.get("nuance", "Standard Analysis")
-    reasoning = data.get("human_reasoning", "No reasoning provided.")
-    is_sarcastic = bool(data.get("is_sarcastic_or_conditional", data.get("is_sarcastic", False)))
-    clause_breakdown = data.get("clause_breakdown", [])
-
-    st.markdown("### 📊 Analysis Summary")
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        emojis = {"POSITIVE": "POSITIVE 😃", "NEGATIVE": "NEGATIVE 🙁", "NEUTRAL": "NEUTRAL 😐"}
-        st.metric("Overall Sentiment", emojis.get(sentiment, sentiment))
-    with col2:
-        st.metric("Confidence Score", f"{confidence * 100:.1f}%")
-    with col3:
-        st.metric("Detected Tone Nuance", nuance)
-
-    st.info(f"💡 **AI Human Reasoning Insight**:\n\n\"{reasoning}\"")
-
-    if is_sarcastic:
-        st.warning("⚠️ **Nuance Alert**: Counterfactual, conditional, or sarcastic subtext detected. Surface praise was adjusted to match reality.")
-
-    st.markdown("---")
-    st.markdown("### 🔍 Sentence Clause Breakdown")
-    for chunk in clause_breakdown:
-        lab = chunk.get('sentiment', 'NEUTRAL').upper()
-        badge = "🟢 POSITIVE" if lab == "POSITIVE" else ("🔴 NEGATIVE" if lab == "NEGATIVE" else "🟡 NEUTRAL")
-        conf = float(chunk.get('confidence', 0.5))
+# Display chat history loop
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
         
-        with st.expander(f"Clause #{chunk.get('chunk_id', 1)}: {badge} ({conf*100:.1f}%)", expanded=True):
-            st.write(f"**Text:** *\"{chunk.get('text', '')}\"*")
-            st.progress(conf)
+        # If the message contains structured analysis data, render it interactively
+        if message.get("analysis"):
+            data = message["analysis"]
+            sentiment = data.get("overall_sentiment", "NEUTRAL").upper()
+            confidence = float(data.get("confidence_score", 0.0))
+            nuance = data.get("detected_nuance", "Standard Analysis")
+            reasoning = data.get("human_reasoning", "")
+            is_sarcastic = bool(data.get("is_sarcastic_or_conditional", False))
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                emojis = {"POSITIVE": "POSITIVE 😃", "NEGATIVE": "NEGATIVE 🙁", "NEUTRAL": "NEUTRAL 😐"}
+                st.metric("Sentiment", emojis.get(sentiment, sentiment))
+            with col2:
+                st.metric("Confidence", f"{confidence * 100:.1f}%")
+            with col3:
+                st.metric("Tone Nuance", nuance)
+                
+            if reasoning:
+                st.info(f"💡 **AI Reasoning Insight**: \"{reasoning}\"")
+                
+            if is_sarcastic:
+                st.warning("⚠️ **Nuance Alert**: Counterfactual or conditional subtext detected.")
+
+            with st.expander("🔍 View Clause Breakdown", expanded=False):
+                for chunk in data.get("clause_breakdown", []):
+                    lab = chunk.get('sentiment', 'NEUTRAL').upper()
+                    badge = "🟢 POSITIVE" if lab == "POSITIVE" else ("🔴 NEGATIVE" if lab == "NEGATIVE" else "🟡 NEUTRAL")
+                    conf = float(chunk.get('confidence', 0.5))
+                    st.write(f"**Clause #{chunk.get('chunk_id', 1)} ({badge} - {conf*100:.1f}%):** *\"{chunk.get('text', '')}\"*")
+                    st.progress(conf)
+
+# Chat input loop for continuous user interaction
+if user_prompt := st.chat_input("Type a sentence to analyze... (e.g. 'If support were actually good, this would be amazing.')"):
+    # Append user message
+    st.session_state.messages.append({"role": "user", "content": user_prompt, "analysis": None})
+    with st.chat_message("user"):
+        st.markdown(user_prompt)
+        
+    # Generate analysis response
+    with st.chat_message("assistant"):
+        with st.spinner("Analyzing semantics in loop..."):
+            analysis_result = intelligent_heuristic_analysis(user_prompt)
+            
+            response_text = f"Analyzed **\"{user_prompt}\"** successfully."
+            st.markdown(response_text)
+            
+            sentiment = analysis_result["overall_sentiment"]
+            confidence = analysis_result["confidence_score"]
+            nuance = analysis_result["detected_nuance"]
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                emojis = {"POSITIVE": "POSITIVE 😃", "NEGATIVE": "NEGATIVE 🙁", "NEUTRAL": "NEUTRAL 😐"}
+                st.metric("Sentiment", emojis.get(sentiment, sentiment))
+            with col2:
+                st.metric("Confidence", f"{confidence * 100:.1f}%")
+            with col3:
+                st.metric("Tone Nuance", nuance)
+                
+            st.info(f"💡 **AI Reasoning Insight**: \"{analysis_result['human_reasoning']}\"")
+            
+            if analysis_result["is_sarcastic_or_conditional"]:
+                st.warning("⚠️ **Nuance Alert**: Counterfactual or conditional subtext detected.")
+
+            with st.expander("🔍 View Clause Breakdown", expanded=False):
+                for chunk in analysis_result["clause_breakdown"]:
+                    lab = chunk['sentiment']
+                    badge = "🟢 POSITIVE" if lab == "POSITIVE" else ("🔴 NEGATIVE" if lab == "NEGATIVE" else "🟡 NEUTRAL")
+                    st.write(f"**Clause #{chunk['chunk_id']} ({badge}):** *\"{chunk['text']}\"*")
+                    st.progress(chunk['confidence'])
+            
+            # Save assistant message with analysis state to conversation history
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": response_text,
+                "analysis": analysis_result
+            })
