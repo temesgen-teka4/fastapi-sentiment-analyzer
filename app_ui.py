@@ -26,7 +26,7 @@ if "messages" not in st.session_state:
     ]
 
 def intelligent_heuristic_analysis(text: str) -> dict:
-    """Advanced heuristic linguistic decoder with negation and fatigue detection."""
+    """Advanced heuristic linguistic decoder updated for rejections, dismissals, and slang typos."""
     clean = text.strip()
     lower_text = clean.lower()
     
@@ -36,7 +36,7 @@ def intelligent_heuristic_analysis(text: str) -> dict:
     overall_sentiment = "NEUTRAL"
     confidence_score = 0.75
 
-    # 1. Check for Negation Patterns (e.g., "not beautiful", "wasn't happy", "not good")
+    # 1. Check for Negation Patterns (e.g., "not beautiful", "wasn't happy")
     negation_match = re.search(r'\b(not|wasn\'t|isn\'t|aren\'t|never|no)\s+([a-zA-Z]+)', lower_text)
     
     if "if " in lower_text and any(term in lower_text for term in ["were actually", "was actually", "had been", "would easily", "should have", "could be"]):
@@ -48,7 +48,6 @@ def intelligent_heuristic_analysis(text: str) -> dict:
     
     elif negation_match:
         negated_word = negation_match.group(2)
-        # If a positive word is negated, it becomes negative (e.g., "not beautiful", "not happy")
         if negated_word in ["beautiful", "good", "nice", "happy", "great", "wonderful", "attractive", "impressive"]:
             overall_sentiment = "NEGATIVE"
             confidence_score = 0.91
@@ -60,17 +59,19 @@ def intelligent_heuristic_analysis(text: str) -> dict:
             detected_nuance = "Negation / Rejection"
             human_reasoning = "The text uses negation to express disagreement or negative judgment."
 
-    # 2. Check for Strong Negative Emotions, Fatigue, Profanity, or Insults
+    # 2. Check for Rejections, Dismissals, Hostility, Fatigue, or Slang Typos
     elif any(term in lower_text for term in [
-        "tired", "exhausted", "bored", "bad", "not happy", "unhappy", "sad", "hate", 
-        "angry", "upset", "mad", "sucks", "fuck", "shit", "bitch", "asshole", 
-        "worst", "horrible", "terrible", "awful", "useless", "poor", "frustrating", 
-        "unresponsive", "disappointed", "mean", "stupid", "dumb", "ugly"
+        "don't want", "dont want", "don't wanna", "dont wanna", "don't like", "dont like",
+        "leave me", "go away", "get out", "tired", "exhausted", "bored", "bad", 
+        "not happy", "unhappy", "sad", "hate", "angry", "upset", "mad", "sucks", 
+        "fuck", "shit", "bitch", "beach", "asshole", "worst", "horrible", "terrible", 
+        "awful", "useless", "poor", "frustrating", "unresponsive", "disappointed", 
+        "mean", "stupid", "dumb", "ugly"
     ]):
         overall_sentiment = "NEGATIVE"
-        confidence_score = 0.95
-        detected_nuance = "Emotional Distress / Negative Evaluation"
-        human_reasoning = "The text explicitly expresses fatigue, negative judgment, emotional distress, or hostility."
+        confidence_score = 0.96
+        detected_nuance = "Interpersonal Rejection / Hostility"
+        human_reasoning = "The text explicitly expresses rejection, dismissal, hostility, or negative emotional judgment."
     
     # 3. Check for Positive Expressions
     elif any(word in lower_text for word in ["great", "amazing", "love", "excellent", "best", "wonderful", "5-star", "happy", "glad", "good", "beautiful"]):
@@ -93,10 +94,10 @@ def intelligent_heuristic_analysis(text: str) -> dict:
     clause_breakdown = []
     for i, clause in enumerate(clauses):
         c_lower = clause.lower()
-        if any(w in c_lower for w in ["not", "tired", "exhausted", "bad", "worst", "poor", "ugly", "sad", "unhappy", "angry", "stupid"]):
+        if any(w in c_lower for w in ["don't", "dont", "not", "tired", "exhausted", "bad", "worst", "poor", "ugly", "sad", "unhappy", "angry", "stupid", "beach", "bitch", "hate"]):
             c_sent = "NEGATIVE"
-            c_conf = 0.90
-        elif any(w in c_lower for w in ["great", "5-star", "good", "amazing", "happy", "beautiful"]) and "not " not in c_lower:
+            c_conf = 0.92
+        elif any(w in c_lower for w in ["great", "5-star", "good", "amazing", "happy", "beautiful"]) and "not " not in c_lower and "don't " not in c_lower:
             c_sent = "NEGATIVE" if is_counterfactual else "POSITIVE"
             c_conf = 0.88
         else:
