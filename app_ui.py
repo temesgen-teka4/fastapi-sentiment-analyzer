@@ -44,9 +44,10 @@ def intelligent_heuristic_analysis(text: str) -> dict:
     
     # 2. Check for Strong Negative Emotions, Profanity, or Explicit Negation ("not happy")
     elif any(term in lower_text for term in [
-        "not happy", "unhappy", "sad", "hate", "angry", "upset", "mad", "sucks", 
+        "bad", "not happy", "unhappy", "sad", "hate", "angry", "upset", "mad", "sucks", 
         "fuck", "shit", "bitch", "asshole", "worst", "horrible", "terrible", 
-        "awful", "useless", "poor", "frustrating", "unresponsive", "disappointed"
+        "awful", "useless", "poor", "frustrating", "unresponsive", "disappointed",
+        "mean", "stupid", "dumb", "idiot", "sucks", "worst", "awful"
     ]):
         overall_sentiment = "NEGATIVE"
         confidence_score = 0.95
